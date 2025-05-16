@@ -1,0 +1,6 @@
+X:\_Demetris_\My Research\DeadMatter\bin\Release\Deadmatter.exe.config
+X:\_Demetris_\My Research\DeadMatter\bin\Release\Deadmatter.exe
+X:\_Demetris_\My Research\DeadMatter\bin\Release\Deadmatter.pdb
+X:\_Demetris_\My Research\DeadMatter\obj\Release\Deadmatter.csproj.CoreCompileInputs.cache
+X:\_Demetris_\My Research\DeadMatter\obj\Release\Deadmatter.exe
+X:\_Demetris_\My Research\DeadMatter\obj\Release\Deadmatter.pdb

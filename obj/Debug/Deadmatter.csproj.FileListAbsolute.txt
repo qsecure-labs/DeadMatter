@@ -1,0 +1,7 @@
+X:\_Demetris_\My Research\DeadMatter\bin\Debug\Deadmatter.exe.config
+X:\_Demetris_\My Research\DeadMatter\bin\Debug\Deadmatter.exe
+X:\_Demetris_\My Research\DeadMatter\bin\Debug\Deadmatter.pdb
+X:\_Demetris_\My Research\DeadMatter\obj\Debug\Deadmatter.csproj.CoreCompileInputs.cache
+X:\_Demetris_\My Research\DeadMatter\obj\Debug\Deadmatter.exe
+X:\_Demetris_\My Research\DeadMatter\obj\Debug\Deadmatter.pdb
+X:\_Demetris_\My Research\DeadMatter\obj\Debug\Deadmatter.csproj.AssemblyReference.cache
