@@ -1,4 +1,4 @@
-name: Build and Release CLI Tool
+name: Build and Release .NET Framework CLI Tool
 
 on:
   push:
@@ -13,25 +13,26 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '8.0.x'
-
-      - name: Restore
-        run: dotnet restore
-
-      - name: Publish self-contained Windows binary
+      - name: Install Chocolatey
         run: |
-          dotnet publish -c Release -r win-x64 --self-contained true `
-            /p:PublishSingleFile=true /p:PublishTrimmed=true -o ./publish
+          Set-ExecutionPolicy Bypass -Scope Process -Force
+          iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+        shell: powershell
 
-      - name: Zip the binary
-        run: Compress-Archive -Path ./publish/* -DestinationPath DeadMatter-${{ github.ref_name }}.zip
+      - name: Install .NET Framework 4.5 Developer Pack
+        run: choco install netfx-4.5-devpack -y
+        shell: powershell
+
+      - name: Build with MSBuild
+        run: msbuild Deadmatter.sln /p:Configuration=Release
+        shell: cmd
+
+      - name: Zip Release Files
+        run: Compress-Archive -Path .\bin\Release\* -DestinationPath DeadMatter-cli-${{ github.ref_name }}-win.zip
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: DeadMatter-${{ github.ref_name }}.zip
+          files: DeadMatter-cli-${{ github.ref_name }}-win.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
