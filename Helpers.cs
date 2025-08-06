@@ -4,6 +4,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
 using System.Text;
 
 namespace Deadmatter
@@ -74,8 +75,6 @@ namespace Deadmatter
                     int offset = PatternAt(data, pattern);
                     if (offset != -1)
                     {
-                        //Console.WriteLine("offset: " + (offset).ToString("X"));
-                        //Console.WriteLine("position + offset: " + (pos + offset).ToString("X"));
                         return (pos + offset);
                     }
                     
@@ -117,7 +116,7 @@ namespace Deadmatter
                         foreach (long addr in tempAddrList)
                         {
                             long actualAddr = (chunkNum * chunkSize) + addr;
-                            if (actualAddr > 0 && actualAddr < length - 90)
+                            if (actualAddr >= 0 && actualAddr < length - 90)
                             {
                                 addrList.Add(actualAddr);
                             }
@@ -369,7 +368,7 @@ namespace Deadmatter
             return addrList;
         }
 
-        //Returns the address of the DES key's KIWI_BCRYPT_HANDLE_KEY structure (not the key's address)
+        //Returns the address of the 3DES key's KIWI_BCRYPT_HANDLE_KEY structure (not the key's address)
         //Use with vvalidate_key_list_ret_KBHK_addr() which returns KIWI_BCRYPT_HANDLE_KEY structure addresses
         public static List<long> GetDESKeyKBHKList(Program.DeadMatter deadmatter, List<long> validatedAddrList)
         {
@@ -388,7 +387,7 @@ namespace Deadmatter
                     if (Globals.debug) { Console.WriteLine("[*] keySize in Dec: " + (BitConverter.ToInt32(keySize, 0))); }
                     if (BitConverter.ToInt32(keySize, 0) == 24)
                     {
-                        if (Globals.debug) { Console.WriteLine("[*] Adding validated DES key's KIWI_BCRYPT_HANDLE_KEY address to the list: " + (string.Format("{0:X}", (long)(pos - 4)))); }
+                        if (Globals.debug) { Console.WriteLine("[*] Adding validated 3DES key's KIWI_BCRYPT_HANDLE_KEY address to the list: " + (string.Format("{0:X}", (long)(pos - 4)))); }
                         addrList.Add((long)(pos));
                     }
 
@@ -403,7 +402,7 @@ namespace Deadmatter
         }
 
 
-        //Returns the address of the DES key's address
+        //Returns the address of the 3DES key's address
         //Use with validate_key_list_ret_key_addr() which returns key addresses
         public static List<long> GetDESKeyList(Program.DeadMatter deadmatter, List<long> validatedAddrList)
         {
@@ -422,7 +421,7 @@ namespace Deadmatter
                     if (Globals.debug) { Console.WriteLine("[*] keySize in Dec: " + (BitConverter.ToInt32(keySize, 0))); }
                     if (BitConverter.ToInt32(keySize, 0) == 24)
                     {
-                        if (Globals.debug) { Console.WriteLine("[*] Adding validated DES key address to the list: " + (string.Format("{0:X}", (long)(pos - 4)))); }
+                        if (Globals.debug) { Console.WriteLine("[*] Adding validated 3DES key address to the list: " + (string.Format("{0:X}", (long)(pos - 4)))); }
                         addrList.Add((long)(pos - 4));
                     }
                         
@@ -469,6 +468,40 @@ namespace Deadmatter
                 }
             }
             return addrList;
+        }
+
+
+        public static byte[] DecryptDES_ECB_NoPadding(byte[] cipherText, byte[] key)
+        {
+            using (DES des = DES.Create())
+            {
+                des.Key = key;
+                des.Mode = CipherMode.ECB;
+                des.Padding = PaddingMode.None;  // No padding
+
+                using (ICryptoTransform decryptor = des.CreateDecryptor())
+                {
+                    // Since no padding, ciphertext length must be a multiple of 8 bytes
+                    return decryptor.TransformFinalBlock(cipherText, 0, cipherText.Length);
+                }
+            }
+        }
+
+        public static byte[] DecryptAES_CBC_NoPadding(byte[] cipherText, byte[] key, byte[] iv)
+        {
+            using (Aes aesAlg = Aes.Create())
+            {
+                aesAlg.Key = key;
+                aesAlg.IV = iv;
+                aesAlg.Mode = CipherMode.CBC;
+                aesAlg.Padding = PaddingMode.None;  // No padding
+
+                using (ICryptoTransform decryptor = aesAlg.CreateDecryptor(aesAlg.Key, aesAlg.IV))
+                {
+                    // Since no padding, ciphertext length must be a multiple of block size (16 bytes)
+                    return decryptor.TransformFinalBlock(cipherText, 0, cipherText.Length);
+                }
+            }
         }
 
         public static bool CompareUsingSequenceEqual(byte[] firstArray, byte[] secondArray)
@@ -519,7 +552,7 @@ namespace Deadmatter
                     if (src[i + j] != pattern[j]) break;
                     if (j == 1) list.Add(i);
                 }
-            }
+            }       
             return list;
         }
 
@@ -551,7 +584,28 @@ namespace Deadmatter
         }
 
 
-        
+        public static bool isHexDigit(byte b)
+        {
+            // '0 - 9' or 'a - f' or 'A - F' 
+            if ((b >= 48 && b <= 57) || (b >= 97 && b <= 102) || (b >= 65 && b <= 70))
+            {
+                return true;
+            }
+            return false;
+        }
+
+        public static byte[] HexStringToByteArray(string hex)
+        {
+            if (hex.Length % 2 != 0)
+                throw new ArgumentException("[-] Error: Hex string must have an even length to a hex byte array.");
+
+            byte[] bytes = new byte[hex.Length / 2];
+            for (int i = 0; i < bytes.Length; i++)
+            {
+                bytes[i] = Convert.ToByte(hex.Substring(i * 2, 2), 16);
+            }
+            return bytes;
+        }
 
         //https://github.com/skelsec/pypykatz/blob/bd1054d1aa948133a697a1dfcb57a5c6463be41a/pypykatz/commons/common.py#L168
         public static ulong GetPtrWithOffset(BinaryReader fileBinaryReader, long pos, string arch)

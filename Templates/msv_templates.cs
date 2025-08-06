@@ -60,74 +60,7 @@ namespace Deadmatter.Templates
             template.MSV1PrimaryOffset = FieldOffset<KIWI_MSV1_0_PRIMARY_CREDENTIALS>("Primary");
             template.PasswordOffset = 0;
 
-            if (Globals.debug) { Console.WriteLine($"[*] Deciding which credential session list struct to use based on OS version/build"); }
-            //identify credential session list structure to be used
-            if (buildNum < WIN_2K3)
-            {
-                if (Globals.debug) { Console.WriteLine($"[*] Using session list struct of Win2K3"); }
-                template.list_entry = typeof(KIWI_MSV1_0_LIST_51);
-            }
-            else if (buildNum < WIN_VISTA)
-            {
-                if (Globals.debug) { Console.WriteLine($"[*] Using session list struct of WinVista"); }
-                template.list_entry = typeof(KIWI_MSV1_0_LIST_52);
-            }
-            else if (buildNum < WIN_7)
-            {
-                if (Globals.debug) { Console.WriteLine($"[*] Using session list struct of Win7"); }
-                template.list_entry = typeof(KIWI_MSV1_0_LIST_60);
-            }
-            else if (buildNum < WIN_8)
-            {
-                if (Globals.debug) { Console.WriteLine($"[*] Using session list struct of Win8"); }
-                //do not do that :) //skelsec
-                /*
-                if (sysinfo.msv_dll_timestamp > 0x53480000)
-                {
-                    template.list_entry = typeof(KIWI_MSV1_0_LIST_61_ANTI_MIMIKATZ);
-                }
-                else
-                {
-                    template.list_entry = typeof(KIWI_MSV1_0_LIST_61);
-                }
-                */
-                template.list_entry = typeof(KIWI_MSV1_0_LIST_61);
-            }
-            else if (buildNum < WIN_BLUE)
-            {
-                if (Globals.debug) { Console.WriteLine($"[*] Using session list struct of WinBlue"); }
-                //template.list_entry = PKIWI_MSV1_0_LIST_62
-                /*
-                Console.WriteLine(sysinfo.msv_dll_timestamp);
-                if (sysinfo.msv_dll_timestamp > 0x53480000)
-                {
-                    template.list_entry = typeof(KIWI_MSV1_0_LIST_63);
-                }
-                else
-                {
-                    template.list_entry = typeof(KIWI_MSV1_0_LIST_62);
-                }
-                */
-                template.list_entry = typeof(KIWI_MSV1_0_LIST_62);
-            }
-            else
-            {
-                if (Globals.debug) { Console.WriteLine($"[*] Using session list struct of Win10/11"); }
-                template.list_entry = typeof(KIWI_MSV1_0_LIST_63);
-            }
-            template.ListTypeSize = Marshal.SizeOf(template.list_entry);
-            template.LocallyUniqueIdentifierOffset = StructFieldOffset(template.list_entry, "LocallyUniqueIdentifier");
-            template.LogonTypeOffset = StructFieldOffset(template.list_entry, "LogonType");
-            template.SessionOffset = StructFieldOffset(template.list_entry, "Session");
-            template.UserNameListOffset = StructFieldOffset(template.list_entry, "UserName");
-            template.DomainOffset = StructFieldOffset(template.list_entry, "Domain");
-            template.CredentialsOffset = StructFieldOffset(template.list_entry, "Credentials");
-            template.pSidOffset = StructFieldOffset(template.list_entry, "pSid");
-            template.CredentialManagerOffset = StructFieldOffset(template.list_entry, "CredentialManager");
-            template.LogonTimeOffset = StructFieldOffset(template.list_entry, "LogonTime");
-            template.LogonServerOffset = StructFieldOffset(template.list_entry, "LogonServer");
-
-            //
+            
             if (buildNum < WIN_10_1507)
             {
                 if (Globals.debug) { Console.WriteLine($"[*] Using Primary Credential struct before  Win10 1507"); }
@@ -679,7 +612,7 @@ namespace Deadmatter.Templates
     {
         private readonly UNICODE_STRING LogonDomainName;
         private readonly UNICODE_STRING UserName;
-        private readonly uint pNtlmCredIsoInProc;   //changed IntPtr because it gets allocated different size (length of bytes) in Debug and Release versions
+        private readonly uint pNtlmCredIsoInProc;   //changed IntPtr because it gets allocated a different size (length of bytes) in Debug and Release versions
         private readonly byte isIso;
         private readonly byte isNtOwfPassword;
         private readonly byte isLmOwfPassword;
@@ -719,7 +652,7 @@ namespace Deadmatter.Templates
     {
         private readonly UNICODE_STRING LogonDomainName;
         private readonly UNICODE_STRING UserName;
-        private readonly uint pNtlmCredIsoInProc;   //changed IntPtr because it gets allocated different size (length of bytes) in Debug and Release versions
+        private readonly uint pNtlmCredIsoInProc;   //changed IntPtr because it gets allocated a different size (length of bytes) in Debug and Release versions
         private readonly byte isIso;
         private readonly byte isNtOwfPassword;
         private readonly byte isLmOwfPassword;

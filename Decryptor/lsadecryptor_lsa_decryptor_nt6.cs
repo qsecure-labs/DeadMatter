@@ -42,27 +42,30 @@ namespace Deadmatter.Decryptor
                 deadmatter.fileBinaryReader.BaseStream.Seek(sigpos, 0);
             }
 
-            //Retrieve the IV foudn based on the current template's pattern
+            //Retrieve the IV found based on the current template's pattern
             byte[] iv = new byte[16];
             iv = GetIV(deadmatter, sigpos, template);
 
 
             /*
             //Get the IV list based on a search of all the IV patterns
-            List<IV_Addresses> IVAddrList = new List<IV_Addresses>();
-            IVAddrList = search_IVs(deadmatter, Globals.IVsignaturesList);
-
-            Console.WriteLine("[*] Displaying list of valid IV addresses found:");
-            if (IVAddrList.Count != 0)
+            if (Globals.debug) 
             {
-                foreach (IV_Addresses IVAddr in IVAddrList)
+                List<IV_Addresses> IVAddrList = new List<IV_Addresses>();
+                IVAddrList = search_IVs(deadmatter, Globals.IVsignaturesList);
+
+                Console.WriteLine("[*] Displaying list of valid IV addresses found:");
+                if (IVAddrList.Count != 0)
                 {
-                    Console.WriteLine("\t[*] Found IV of " + IVAddr.lsaVersion + " at position " + (IVAddr.address).ToString("X"));
+                    foreach (IV_Addresses IVAddr in IVAddrList)
+                    {
+                        Console.WriteLine("\t[*] Found IV of " + IVAddr.lsaVersion + " at position " + (IVAddr.address).ToString("X"));
+                    }
                 }
             }
             */
 
-            //Get the list of DES keys found
+            //Get the list of 3DES keys found
             List<byte[]> DESkeysList = new List<byte[]>();
             DESkeysList = GetDESKeys(deadmatter);
 
@@ -71,7 +74,7 @@ namespace Deadmatter.Decryptor
             AESkeysList = GetAESKeys(deadmatter);
 
 
-            //Add the list of DES and AES keys to the LsaKeys structure list 
+            //Add the list of 3DES and AES keys to the LsaKeys structure list 
             LsaDecryptor.LsaKeys LsaKeys = new LsaDecryptor.LsaKeys();
             foreach (byte[] deskey in DESkeysList)
             {
@@ -96,11 +99,6 @@ namespace Deadmatter.Decryptor
         {
             Console.WriteLine("[*] Looking for IV signature pattern...");
             long fl = Helpers.SearchSignature(deadmatter, template.key_pattern.signature);
-            if (fl == 0)
-            {
-                //Console.WriteLine("[-] IV signature not found! ");
-                //System.Environment.Exit(0);
-            }
             return fl;
         }
 
@@ -148,7 +146,7 @@ namespace Deadmatter.Decryptor
             List<long> addrList = new List<long>();
             List<long> validAddrList = new List<long>();
             List<long> desAddrList = new List<long>();
-            byte[] RUUUpattern = new byte[] { 0x52, 0x55, 0x55, 0x55 };
+            byte[] RUUUpattern = new byte[] { 0x52, 0x55, 0x55, 0x55 };         //RUUU
 
             Console.WriteLine(" ");
             Console.WriteLine("[*] Searching for encryption keys...");
@@ -171,30 +169,30 @@ namespace Deadmatter.Decryptor
             }
 
             if (Globals.debug) { Console.WriteLine(" "); }
-            Console.WriteLine("[*] Acquiring DES keys...");
+            Console.WriteLine("[*] Acquiring 3DES keys...");
             int count = 0;
             List<byte[]> listDESkeys = new List<byte[]>();
             desAddrList = Helpers.GetDESKeyKBHKList(deadmatter, validAddrList);
             if (desAddrList.Count == 0)
             {
-                Console.WriteLine("[-] Error: Could not find any valid candidate DES key addresses... Quitting");
+                Console.WriteLine("[-] Error: Could not find any valid candidate 3DES key addresses... Quitting");
                 System.Environment.Exit(0);
             }
             else
             {
                 foreach (long aaddr in desAddrList)
                 {
-                    if (Globals.debug) { Console.WriteLine("[*] Valid candidate DES key address: " + (string.Format("{0:X}", aaddr))); }
+                    if (Globals.debug) { Console.WriteLine("[*] Valid candidate 3DES key address: " + (string.Format("{0:X}", aaddr))); }
                     deadmatter.fileBinaryReader.BaseStream.Seek(desAddrList[count], 0);
 
                     byte[] h3DesKeyBytes1 = deadmatter.fileBinaryReader.ReadBytes(Marshal.SizeOf(typeof(KIWI_BCRYPT_HANDLE_KEY)));
-                    //Console.WriteLine(Helpers.ByteArrayToString(h3DesKeyBytes1));
+                    //if (Globals.debug) { Console.WriteLine(Helpers.ByteArrayToString(h3DesKeyBytes1));}
                     KIWI_BCRYPT_HANDLE_KEY h3DesKey1 = Helpers.ReadStruct<KIWI_BCRYPT_HANDLE_KEY>(h3DesKeyBytes1);
 
                     byte[] extracted3DesKeyByte1 = deadmatter.fileBinaryReader.ReadBytes(Marshal.SizeOf(typeof(KIWI_BCRYPT_KEY81)));
                     KIWI_BCRYPT_KEY81 extracted3DesKey1 = Helpers.ReadStruct<KIWI_BCRYPT_KEY81>(extracted3DesKeyByte1);
-                    //Console.WriteLine(Helpers.ByteArrayToString(extracted3DesKeyByte1));
-                    Console.WriteLine("[+] Valid candidate DES key: " + Helpers.ByteArrayToString(extracted3DesKey1.hardkey.data.Take(24).ToArray()));
+                    //if (Globals.debug) { Console.WriteLine(Helpers.ByteArrayToString(extracted3DesKeyByte1));}
+                    Console.WriteLine("[+] Valid candidate 3DES key: " + Helpers.ByteArrayToString(extracted3DesKey1.hardkey.data.Take(24).ToArray()));
 
                     listDESkeys.Add(extracted3DesKey1.hardkey.data.Take(24).ToArray());
                     count++;
@@ -359,13 +357,16 @@ namespace Deadmatter.Decryptor
                                 {
                                     //Uncomment the code section below to display the blob preceding the Win11 24H2 470201 pattern 
                                     /*
-                                    Console.WriteLine("[*] The blob found before the Win11 24H2 470201 pattern is:");
-                                    Console.WriteLine(Helpers.PrintHexBytes(tempByteChunkBefore470201));
-                                    Console.WriteLine("[*] Byte 5 of blob is: " + string.Format("{0:X}", (tempByteChunkBefore470201[5])));
-                                    Console.WriteLine("[*] Byte 5 + 24 of blob is: " + string.Format("{0:X}", (tempByteChunkBefore470201[29])));
-                                    Console.WriteLine("[*] Byte 5 + 32 of blob is: " + string.Format("{0:X}", (tempByteChunkBefore470201[37])));
-                                    Console.WriteLine("[*] Byte 5 + 48 of blob is: " + string.Format("{0:X}", (tempByteChunkBefore470201[53])));
-                                    Console.WriteLine("[*] Byte 5 + 64 of blob is: " + string.Format("{0:X}", (tempByteChunkBefore470201[69])));
+                                    if (Globals.debug) 
+                                    {
+                                        Console.WriteLine("[*] The blob found before the Win11 24H2 470201 pattern is:");
+                                        Console.WriteLine(Helpers.PrintHexBytes(tempByteChunkBefore470201));
+                                        Console.WriteLine("[*] Byte 5 of blob is: " + string.Format("{0:X}", (tempByteChunkBefore470201[5])));
+                                        Console.WriteLine("[*] Byte 5 + 24 of blob is: " + string.Format("{0:X}", (tempByteChunkBefore470201[29])));
+                                        Console.WriteLine("[*] Byte 5 + 32 of blob is: " + string.Format("{0:X}", (tempByteChunkBefore470201[37])));
+                                        Console.WriteLine("[*] Byte 5 + 48 of blob is: " + string.Format("{0:X}", (tempByteChunkBefore470201[53])));
+                                        Console.WriteLine("[*] Byte 5 + 64 of blob is: " + string.Format("{0:X}", (tempByteChunkBefore470201[69])));
+                                    }
                                     */
                                 }
 

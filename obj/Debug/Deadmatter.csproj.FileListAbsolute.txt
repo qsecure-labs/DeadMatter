@@ -5,3 +5,19 @@ X:\_Demetris_\My Research\DeadMatter\obj\Debug\Deadmatter.csproj.CoreCompileInpu
 X:\_Demetris_\My Research\DeadMatter\obj\Debug\Deadmatter.exe
 X:\_Demetris_\My Research\DeadMatter\obj\Debug\Deadmatter.pdb
 X:\_Demetris_\My Research\DeadMatter\obj\Debug\Deadmatter.csproj.AssemblyReference.cache
+C:\Users\user\Desktop\DeadMatter\DeadMatter\bin\Debug\Deadmatter.exe.config
+C:\Users\user\Desktop\DeadMatter\DeadMatter\bin\Debug\Deadmatter.exe
+C:\Users\user\Desktop\DeadMatter\DeadMatter\bin\Debug\Deadmatter.pdb
+C:\Users\user\Desktop\DeadMatter\DeadMatter\obj\Debug\Deadmatter.csproj.AssemblyReference.cache
+C:\Users\user\Desktop\DeadMatter\DeadMatter\obj\Debug\Deadmatter.exe.config
+C:\Users\user\Desktop\DeadMatter\DeadMatter\obj\Debug\Deadmatter.csproj.CoreCompileInputs.cache
+C:\Users\user\Desktop\DeadMatter\DeadMatter\obj\Debug\Deadmatter.exe
+C:\Users\user\Desktop\DeadMatter\DeadMatter\obj\Debug\Deadmatter.pdb
+C:\Tools\DM\DeadMatter_cleanup\bin\Debug\Deadmatter.exe.config
+C:\Tools\DM\DeadMatter_cleanup\bin\Debug\Deadmatter.exe
+C:\Tools\DM\DeadMatter_cleanup\bin\Debug\Deadmatter.pdb
+C:\Tools\DM\DeadMatter_cleanup\obj\Debug\Deadmatter.csproj.AssemblyReference.cache
+C:\Tools\DM\DeadMatter_cleanup\obj\Debug\Deadmatter.exe.config
+C:\Tools\DM\DeadMatter_cleanup\obj\Debug\Deadmatter.csproj.CoreCompileInputs.cache
+C:\Tools\DM\DeadMatter_cleanup\obj\Debug\Deadmatter.exe
+C:\Tools\DM\DeadMatter_cleanup\obj\Debug\Deadmatter.pdb

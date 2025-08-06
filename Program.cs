@@ -9,11 +9,13 @@ namespace Deadmatter
 {
     public static class Globals
     {
+        public static long fileSizeInBytes = new long();
         public static List<long> gValidAddrList = new List<long>();
         public static List<long> gDesAddrList = new List<long>();
         public static List<long> gAesAddrList = new List<long>();
         public static List<byte[]> gDESKeysList = new List<byte[]>();
         public static List<byte[]> gAESKeysList = new List<byte[]>();
+        public static List<LsaDecryptor.LsaKeys> gLSAkeyslist = new List<LsaDecryptor.LsaKeys>();
         public static bool boolValidIV = false;
         public static bool debug = false;
         public static bool idOS = false;
@@ -21,6 +23,7 @@ namespace Deadmatter
         public static bool bSearch = false;
         public static int bSearchSize = 16;
         public static bool dpapi = false;
+        public static bool sam = false;
         public static List<IV_Signatures> IVsignaturesList = new List<IV_Signatures>();
         public static List<IV_Addresses> IVaddressesList = new List<IV_Addresses>();
     }
@@ -43,7 +46,7 @@ namespace Deadmatter
                 " | | | |/ _ \\/ _` |/ _` | |\\/| |/ _` | __| __/ _ \\ '__|\n" +
                 " | |_| |  __/ (_| | (_| | |  | | (_| | |_| ||  __/ |   \n" +
                 " |____/ \\___|\\__,_|\\__,_|_|  |_|\\__,_|\\__|\\__\\___|_|   \n" +
-                "\n v0.9.2 alpha");
+                "\n v0.9.5 beta");
 
 
 
@@ -249,6 +252,7 @@ namespace Deadmatter
                 return;
             }
 
+
             DeadMatter deadmatter = new DeadMatter();
             deadmatter.ARCHITECTURE = "x64";
             deadmatter.BUILDNUMBER = buildNumber;
@@ -257,44 +261,50 @@ namespace Deadmatter
             using (BinaryReader fileBinaryReader = new BinaryReader(File.Open(filename, FileMode.Open)))
             {
                 deadmatter.fileBinaryReader = fileBinaryReader;
+                Globals.fileSizeInBytes = fileBinaryReader.BaseStream.Length;
 
-
-                //Get LSA Keys and IV
-                Console.WriteLine($" ");
-                Console.WriteLine($"-------------------------------------------------------------------------");
-                Console.WriteLine($" ");
-                try 
+                if (Globals.mode == "mimikatz" || Globals.mode == "carve" || Globals.mode == "both" || Globals.dpapi == true)
                 {
-                    //Locate the IV based on mimikatz search patterns and offsets
-                    //Locate valid DES and AES keys
-                    if (Globals.debug) { Console.WriteLine("[*] Getting LSA template for " + deadmatter.ARCHITECTURE + " ARCH and Win Build " + deadmatter.BUILDNUMBER); }
-                    deadmatter.lsakeysList = LsaDecryptor.Choose(deadmatter, lsaTemplate.GetTemplate(deadmatter.ARCHITECTURE, deadmatter.BUILDNUMBER));
+                    //Get LSA Keys and IV
+                    Console.WriteLine($" ");
+                    Console.WriteLine($"-------------------------------------------------------------------------");
+                    Console.WriteLine($" ");
+                    try
+                    {
+                        //Locate the IV based on mimikatz search patterns and offsets
+                        //Locate valid 3DES and AES keys
+                        if (Globals.debug) { Console.WriteLine("[*] Getting LSA template for " + deadmatter.ARCHITECTURE + " ARCH and Win Build " + deadmatter.BUILDNUMBER); }
+                        deadmatter.lsakeysList = LsaDecryptor.Choose(deadmatter, lsaTemplate.GetTemplate(deadmatter.ARCHITECTURE, deadmatter.BUILDNUMBER));
 
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine($"[-] Error: IV and Keys failed with error -  {e.Message}");
+                    }
                 }
-                catch (Exception e)
+
+
+                if (Globals.mode == "mimikatz" || Globals.mode == "carve" || Globals.mode == "both")
                 {
-                    Console.WriteLine($"[-] Error: IV and Keys failed with error -  {e.Message}");
-                }
+                    //Get MSV Credentials
+                    Console.WriteLine($" ");
+                    Console.WriteLine($"-------------------------------------------------------------------------");
+                    Console.WriteLine($" ");
+                    try
+                    {
+                        //Locate and validate MSV blobs
+                        List<long> msvBlobsAddrList = new List<long>();
+                        msvBlobsAddrList = Msv1_.FindValidMSVBlobs(deadmatter);
 
-
-
-
-                //Get MSV Credentials
-                Console.WriteLine($" ");
-                Console.WriteLine($"-------------------------------------------------------------------------");
-                Console.WriteLine($" ");
-                try
-                {
-                    //Locate and validate MSV blobs
-                    List<long> msvBlobsAddrList = new List<long>();
-                    msvBlobsAddrList = Msv1_.FindValidMSVBlobs(deadmatter);
-
-                    //Extract MSV credentials
-                    Msv1_.FindCredentials(deadmatter, msv.GetTemplate(deadmatter.ARCHITECTURE, deadmatter.BUILDNUMBER), msvBlobsAddrList);    
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine($"[-] Error: MSV failed with error -  {e.Message}");
+                        //Extract MSV credentials
+                        Msv1_.FindCredentials(deadmatter, msv.GetTemplate(deadmatter.ARCHITECTURE, deadmatter.BUILDNUMBER), msvBlobsAddrList);
+                        //Populate the deadmatter object with the keys found so the can be used in DPAPI and elsewhere
+                        deadmatter.lsakeysList = Globals.gLSAkeyslist;
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine($"[-] Error: MSV failed with error -  {e.Message}");
+                    }
                 }
 
 
@@ -315,6 +325,9 @@ namespace Deadmatter
                         Console.WriteLine($"[-] Error: DPAPI failed with error -  {e.Message}");
                     }
                 }
+
+
+                
             }
         }
     }

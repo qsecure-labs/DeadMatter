@@ -11,10 +11,12 @@ namespace Deadmatter.Decryptor
     {
         public static int FindCredentials(Program.DeadMatter deadmatter)
         {
+            int dpapiCounter = 1;
             List<long> patternAddrListSystem = new List<long>();
             List<long> patternAddrListUser = new List<long>();
 
             string dpapiLocalMachinePattern = @"C:\Windows\system32\Microsoft\Protect\S-1-5-18\";
+            string dpapiLocalMachinePattern2 = @"C:\WINDOWS\system32\Microsoft\Protect\S-1-5-18\";
             string dpapiSysUserPattern = @"C:\Windows\system32\Microsoft\Protect\S-1-5-18\User\";
             string dpapiUserPattern = @"\AppData\Roaming\Microsoft\Protect\S-";
 
@@ -22,10 +24,17 @@ namespace Deadmatter.Decryptor
             byte[] bytesDpapiKeySizePattern = { 0x40, 0x00, 0x00, 0x00 }; //key size 0x40 = 64 bytes
             byte[] userStringBytes = { 0x00, 0x55, 0x00, 0x73, 0x00, 0x65, 0x00, 0x72, 0x00, 0x5C }; // UTF16 - User plus a backslash
             byte[] utf16leBytesDpapiLocalMachinePattern = Encoding.Unicode.GetBytes(dpapiLocalMachinePattern);
+            byte[] utf16leBytesDpapiLocalMachinePattern2 = Encoding.Unicode.GetBytes(dpapiLocalMachinePattern2);
             byte[] utf16leBytesDpapiUserPattern = Encoding.Unicode.GetBytes(dpapiUserPattern);
 
             Console.WriteLine("\n[*] Searching for DPAPI data structures");
             patternAddrListSystem = Helpers.SearchSignatureTillEnd(deadmatter, utf16leBytesDpapiLocalMachinePattern);
+            if (patternAddrListSystem.Count == 0)
+            {
+                patternAddrListSystem = Helpers.SearchSignatureTillEnd(deadmatter, utf16leBytesDpapiLocalMachinePattern2);
+            }
+            
+
             foreach (long paddr in patternAddrListSystem)
             {
                 if (paddr == 0)
@@ -74,7 +83,7 @@ namespace Deadmatter.Decryptor
 
                             if (dpapiEntry.keySize > 1)
                             {
-
+                                int k = 1;
                                 foreach (LsaDecryptor.LsaKeys lsaKeys in deadmatter.lsakeysList)
                                 {
                                     if (lsaKeys.des_key.Length > 0)
@@ -93,7 +102,7 @@ namespace Deadmatter.Decryptor
 
                                         if (Globals.debug)
                                         {
-                                            Console.WriteLine("[*] Decryption using DES Key:");
+                                            Console.WriteLine("[*] Decryption using 3DES Key:");
                                             Console.WriteLine(Helpers.ByteArrayToString(lsaKeys.des_key));
                                             Console.WriteLine("[*] Decryption using IV:");
                                             Console.WriteLine(Helpers.ByteArrayToString(lsaKeys.iv));
@@ -101,8 +110,8 @@ namespace Deadmatter.Decryptor
 
                                         Console.WriteLine($" ");
                                         Console.WriteLine($"=========================================================================");
-                                        Console.WriteLine("Decrypted Credentials");
-                                        Console.WriteLine("\tDPAPI :");
+                                        Console.WriteLine("Decrypted Credentials [" + dpapiCounter + "]");
+                                        Console.WriteLine("\tDPAPI [Key: " + k +"]:");
                                         Console.WriteLine($"\t * SID\t\t: " + "S-1-5-18");
                                         Console.WriteLine($"\t * Username\t: " + "(System User)");
                                         Console.WriteLine($"\t * Logon ID\t: " + dpapi.luid);
@@ -120,7 +129,8 @@ namespace Deadmatter.Decryptor
                                         }
                                         Console.WriteLine($"=========================================================================");
 
-
+                                        k++;
+                                        dpapiCounter++;
                                     }
                                 }
                             }
@@ -144,7 +154,7 @@ namespace Deadmatter.Decryptor
                         
                             if (dpapiEntry.keySize > 1)
                             {
-
+                                int l = 1;
                                 foreach (LsaDecryptor.LsaKeys lsaKeys in deadmatter.lsakeysList)
                                 {
                                     if (lsaKeys.des_key.Length > 0)
@@ -163,7 +173,7 @@ namespace Deadmatter.Decryptor
 
                                         if (Globals.debug)
                                         {
-                                            Console.WriteLine("[*] Decryption using DES Key:");
+                                            Console.WriteLine("[*] Decryption using 3DES Key:");
                                             Console.WriteLine(Helpers.ByteArrayToString(lsaKeys.des_key));
                                             Console.WriteLine("[*] Decryption using IV:");
                                             Console.WriteLine(Helpers.ByteArrayToString(lsaKeys.iv));
@@ -172,8 +182,8 @@ namespace Deadmatter.Decryptor
 
                                         Console.WriteLine($" ");
                                         Console.WriteLine($"=========================================================================");
-                                        Console.WriteLine("Decrypted Credentials");
-                                        Console.WriteLine("\tDPAPI :");
+                                        Console.WriteLine("Decrypted Credentials [" + dpapiCounter + "]");
+                                        Console.WriteLine("\tDPAPI [Key: " + l + "]:");
                                         Console.WriteLine($"\t * SID\t\t: " + "S-1-5-18");
                                         Console.WriteLine($"\t * Username\t: " + "(Local Machine)");
                                         Console.WriteLine($"\t * Logon ID\t: " + dpapi.luid);
@@ -191,6 +201,8 @@ namespace Deadmatter.Decryptor
                                         }
                                         Console.WriteLine($"=========================================================================");
 
+                                        l++;
+                                        dpapiCounter++;
                                     }
                                 }
                             }
@@ -240,7 +252,7 @@ namespace Deadmatter.Decryptor
                         //lets check if the key size is found 80 bytes before the C Drive pattern
                         if (puaddr - lengthCDriveUsernamePath > 80)
                         {
-                            if (Globals.debug) { Console.WriteLine("[*] Space before pattern is greater then 80 bytes so it is safe to proceed"); }
+                            if (Globals.debug) { Console.WriteLine("[*] Space before pattern is greater than 80 bytes so it is safe to proceed"); }
                             deadmatter.fileBinaryReader.BaseStream.Seek(puaddr - lengthCDriveUsernamePath - 80, 0);
                             tempUserKeySizeChunk = deadmatter.fileBinaryReader.ReadBytes(4);
                             keySizeUserPatternAddrList = AllPatternAt(tempUserKeySizeChunk, bytesDpapiKeySizePattern);
@@ -253,7 +265,7 @@ namespace Deadmatter.Decryptor
 
                                 if (Globals.debug) { Console.WriteLine("--------------------------------------------------------------------------"); }
                                 //Lets extract the Username
-                                //Get the bytes between the C: backslash and the User pattern to extract the Username
+                                //Get the bytes between the C: backslash Users and the User pattern to extract the Username
                                 deadmatter.fileBinaryReader.BaseStream.Seek(puaddr - lengthCDriveUsernamePath + 18, 0);
                                 byte[] usernameBytes = deadmatter.fileBinaryReader.ReadBytes(lengthCDriveUsernamePath - 18);
                                 username = Encoding.Unicode.GetString(usernameBytes);
@@ -278,9 +290,9 @@ namespace Deadmatter.Decryptor
                                 }
 
                                 //Lets extract the DPAPI structure bytes
-                                if (Globals.debug) { Console.WriteLine("[*] User DPAPI structure bytes:"); }
                                 deadmatter.fileBinaryReader.BaseStream.Seek(puaddr - lengthCDriveUsernamePath - 128, 0);
                                 byte[] dpapiStructBytes = deadmatter.fileBinaryReader.ReadBytes(120);
+                                if (Globals.debug) { Console.WriteLine("[*] User DPAPI structure bytes:"); }
                                 if (Globals.debug) { Console.WriteLine(Helpers.ByteArrayToString(dpapiStructBytes)); }
 
                                 dpapi.KIWI_MASTERKEY_CACHE_ENTRY dpapiEntry = ReadStruct<dpapi.KIWI_MASTERKEY_CACHE_ENTRY>(dpapiStructBytes);
@@ -288,7 +300,7 @@ namespace Deadmatter.Decryptor
 
                                 if (dpapiEntry.keySize > 1)
                                 {
-                                    
+                                    int m = 1;
                                     foreach (LsaDecryptor.LsaKeys lsaKeys in deadmatter.lsakeysList)
                                     {
                                         if (lsaKeys.des_key.Length > 0)
@@ -307,7 +319,7 @@ namespace Deadmatter.Decryptor
 
                                             if (Globals.debug)
                                             {
-                                                Console.WriteLine("[*] Decryption using DES Key:");
+                                                Console.WriteLine("[*] Decryption using 3DES Key:");
                                                 Console.WriteLine(Helpers.ByteArrayToString(lsaKeys.des_key));
                                                 Console.WriteLine("[*] Decryption using IV:");
                                                 Console.WriteLine(Helpers.ByteArrayToString(lsaKeys.iv));
@@ -315,8 +327,8 @@ namespace Deadmatter.Decryptor
 
                                             Console.WriteLine($" ");
                                             Console.WriteLine($"=========================================================================");
-                                            Console.WriteLine("Decrypted Credentials");
-                                            Console.WriteLine("\tDPAPI :");
+                                            Console.WriteLine("Decrypted Credentials [" + dpapiCounter + "]");
+                                            Console.WriteLine("\tDPAPI [Key: " + m + "]:");
                                             Console.WriteLine($"\t * SID\t\t: " + SID);
                                             Console.WriteLine($"\t * Username\t: " + username);
                                             Console.WriteLine($"\t * Logon ID\t: " + dpapi.luid);
@@ -334,6 +346,8 @@ namespace Deadmatter.Decryptor
                                             }
                                             Console.WriteLine($"=========================================================================");
 
+                                            m++;
+                                            dpapiCounter++;
                                         }
                                     }
                                 }

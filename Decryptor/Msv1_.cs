@@ -36,7 +36,7 @@ namespace Deadmatter.Decryptor
                 }
             }
 
-            //Setup our list of DES keys before proceeding with the processing of MSV Credential structures
+            //Setup our list of 3DES keys before proceeding with the processing of MSV Credential structures
             List<byte[]> DESkeysList = new List<byte[]>();
             foreach (LsaDecryptor.LsaKeys lsa_keys in deadmatter.lsakeysList)
             {
@@ -94,9 +94,14 @@ namespace Deadmatter.Decryptor
                     deadmatter.fileBinaryReader.BaseStream.Seek(primaryCredentials.Credentials.Buffer, 0);
                     byte[] msvCredentialsBytes = deadmatter.fileBinaryReader.ReadBytes(primaryCredentials.Credentials.MaximumLength);
 
+                    /*
                     //Uncomment the below 2 lines to display the encrypted MSV Credential struct hex bytes
-                    //Console.WriteLine("msvCredentialsBytes (PRIMARY_CREDENTIAL struct):");
-                    //Console.WriteLine("--" + Helpers.ByteArrayToString(msvCredentialsBytes));
+                    if (Globals.debug) 
+                    {
+                        Console.WriteLine("msvCredentialsBytes (PRIMARY_CREDENTIAL struct):");
+                        Console.WriteLine("--" + Helpers.ByteArrayToString(msvCredentialsBytes));
+                    }
+                    */
 
                     List<byte[]> keysList = new List<byte[]>();
                     if (msvCredentialsBytes.Length % 8 != 0)
@@ -121,7 +126,7 @@ namespace Deadmatter.Decryptor
                         }
                         else
                         {
-                            if (Globals.debug) { Console.WriteLine("[*] Decryption will happen with DES"); }
+                            if (Globals.debug) { Console.WriteLine("[*] Decryption will happen with 3DES"); }
                             //tempLsaKeys.des_key = key;
                             deadmatter.lsakeys.des_key = key;
                             deadmatter.lsakeys.iv = iv;
@@ -133,12 +138,12 @@ namespace Deadmatter.Decryptor
                         var usLogonDomainName = ReadStruct<UNICODE_STRING>(GetBytes(msvDecryptedCredentialsBytes, template.LogonDomainNameOffset, Marshal.SizeOf(typeof(UNICODE_STRING))));
                         var usUserName = ReadStruct<UNICODE_STRING>(GetBytes(msvDecryptedCredentialsBytes, template.UserNameOffset, Marshal.SizeOf(typeof(UNICODE_STRING))));
 
-                        //CHEK IF THE CURRENTLY DECRYPTED MSV STRUCTURE IS VALID. IF IT IS NOT, MOVE ON TO THE NEXT AVAILABLE KEY
+                        //CHECK IF THE CURRENTLY DECRYPTED MSV STRUCTURE IS VALID. IF IT IS NOT, MOVE ON TO THE NEXT AVAILABLE KEY
                         //If the position of the username string is beyond the MSV Credential structure
                         //or if the size of the username is too big,
                         //then the current MSV Credential structure is either invalid or failed decryption
                         //hence move on to the next MSV address in the list
-                        if (usUserName.Buffer > primaryCredentials.Credentials.MaximumLength || usUserName.Length > 256)
+                        if (usUserName.Buffer > primaryCredentials.Credentials.MaximumLength || usUserName.Length > 256 || msvDecryptedCredentialsBytes[17] != 0x00 || msvDecryptedCredentialsBytes[19] != 0x00)
                         {
                             if (Globals.debug) { Console.WriteLine("[*] The current MSV Credential structure at " + (string.Format("{0:X}", (primaryCredentials.Credentials.Buffer))) + " is either invalid or failed decryption using key " + Helpers.ByteArrayToString(deadmatter.lsakeys.des_key)); }
                             continue;
@@ -159,7 +164,7 @@ namespace Deadmatter.Decryptor
 
                                 byte[] ivSegmentArray = new byte[] { };
                                 long segmentSize = Globals.bSearchSize * 1024;      //1KB increments
-                                Console.WriteLine("[*] Searching for the IV in the " + Globals.bSearchSize + "KB blobs before the LCD");
+                                Console.WriteLine("[*] Searching for the IV in the " + Globals.bSearchSize + "KB blob before the LCD upto the ECD");
                                 LsaDecryptor.LsaKeys lsaKeys = new LsaDecryptor.LsaKeys();
                                 lsaKeys = deadmatter.lsakeys;
 
@@ -168,9 +173,9 @@ namespace Deadmatter.Decryptor
                                     //Get the IV Segment blob
                                     deadmatter.fileBinaryReader.BaseStream.Seek(LCD_ECD_addr.addrLCD - segmentSize, 0);
                                     ivSegmentArray = deadmatter.fileBinaryReader.ReadBytes((int)(segmentSize + LCD_ECD_addr.distanceECD)); //segmentSize + the destance from LCD to ECD
-                                    
+
                                     //Uncomment the line below to display the selected IV Segment blob
-                                    //Console.WriteLine(Helpers.ByteArrayToString(ivSegmentArray));
+                                    //if (Globals.debug) { Console.WriteLine(Helpers.ByteArrayToString(ivSegmentArray));}
 
                                     byte[] validIV = BruteforceSearchValidIV(ivSegmentArray, msvCredentialsBytes, lsaKeys);
                                     byte[] nullBytes16 = new byte[] { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
@@ -247,7 +252,7 @@ namespace Deadmatter.Decryptor
                         //------------------------------- END OF SECTION FOR BRUTEFORCE SEARCHING THE CORRECT IV ---------------------------------------
 
                         // ----------- CHECK IV VALIDITY -----------
-                        //If the decryption of the first MSV bytes is successful or we brute-force founr the IV that means the IV is valid so set the Global variable to true
+                        //If the decryption of the first MSV bytes is successful or we brute-force found the IV that means the IV is valid so set the Global variable to true
                         //I put this check here because the previous one happens only in debug mode and I need to set the Global IV var during normal operation flow
                         if ((msvDecryptedCredentialsBytes[1] == 0x00 &&
                             msvDecryptedCredentialsBytes[3] == 0x00 &&
@@ -261,7 +266,7 @@ namespace Deadmatter.Decryptor
                             {
                                 Console.WriteLine($"[*] The IV found is valid!!!");
                                 if (Globals.debug) { Console.WriteLine(""); }
-                                ivMsgDisplayed = true;      //set this so the msg is display only once and not in every loop
+                                ivMsgDisplayed = true;      //set this so the msg is displayed only once and not in every loop
                             }
                         }
                         else
@@ -270,7 +275,7 @@ namespace Deadmatter.Decryptor
                             {
                                 Console.WriteLine($"[*] The IV found is not valid!!!");
                                 if (Globals.debug) { Console.WriteLine(""); }
-                                ivMsgDisplayed = true;      //set this so the msg is display only once and not in every loop
+                                ivMsgDisplayed = true;      //set this so the msg is displayed only once and not in every loop
                             }
                         }
 
@@ -330,7 +335,7 @@ namespace Deadmatter.Decryptor
                             Console.WriteLine("[*] msvDecryptedCredentialsBytes (PRIMARY_CREDENTIAL struct):");
                             Console.WriteLine("-- " + Helpers.ByteArrayToString(msvDecryptedCredentialsBytes));
 
-                            //Check the validity of the IV based on the successful decryption of the first 8 bytes of the MSV struct for DES
+                            //Check the validity of the IV based on the successful decryption of the first 8 bytes of the MSV struct for 3DES
                             //and 16 bytes for AES. There should be a lot of null bytes except at position 0 which specifies the Domain Length
                             //and position 2 which specifies the Domain Max Length. If the IV is not the correct one, we need to find out the 
                             //Domain Length manually.
@@ -341,12 +346,12 @@ namespace Deadmatter.Decryptor
                                 msvDecryptedCredentialsBytes[6] == 0x00 &&
                                 msvDecryptedCredentialsBytes[7] == 0x00)
                             {
-                                Console.WriteLine($"[*] The first 8-16 bytes of the MSV Credential struct have been decrypted successfully.");
+                                Console.WriteLine($"[*] The first bytes (8 or 16) of the MSV Credential struct have been decrypted successfully.");
                                 Console.WriteLine($"[*] The IV found is the correct one!!!");
                             }
                             else
                             {
-                                Console.WriteLine($"[*] The first 8-16 bytes of the MSV Credential struct failed decryption.");
+                                Console.WriteLine($"[*] The first bytes (8 or 16) of the MSV Credential struct failed decryption.");
                                 Console.WriteLine($"[*] The IV found is the wrong one, but we can extract the Domain string without it.");
                             }
 
@@ -390,7 +395,7 @@ namespace Deadmatter.Decryptor
                         }
 
                         //Check the validity of the Domain based on its length or whether the IV was valid and we managed to decrypt
-                        //the first 8 bytes of the MSV struct (if DES was used), which hold the Domain Length and Domain Max Length.
+                        //the first 8 bytes of the MSV struct (if 3DES was used), which hold the Domain Length and Domain Max Length.
                         if (usLogonDomainName.Length > 32 || Globals.boolValidIV == false)
                         {
                             //The Domain Max Length is the difference between the start of the Domain buffer and the start of the Username buffer
@@ -464,11 +469,16 @@ namespace Deadmatter.Decryptor
                             Console.WriteLine($"[*] SHA1 length is " + SHA_DIGEST_LENGTH + " bytes");
                             Console.WriteLine($"[*] SHA1 bytes: " + Helpers.ByteArrayToString(GetBytes(msvDecryptedCredentialsBytes, template.ShaOwPasswordOffset, SHA_DIGEST_LENGTH)));
                             Console.WriteLine($"[+] SHA1 cleartext: " + PrintHashBytes(GetBytes(msvDecryptedCredentialsBytes, template.ShaOwPasswordOffset, SHA_DIGEST_LENGTH)));
-                            //Console.WriteLine($"[*] DPAPI hash offest: " + template.DPAPIProtectedOffset);
-                            //Console.WriteLine($"[*] DPAPI hash length is " + LM_NTLM_HASH_LENGTH + " bytes");
-                            //Console.WriteLine($"[*] DPAPI hash bytes: " + Helpers.ByteArrayToString(GetBytes(msvDecryptedCredentialsBytes, template.DPAPIProtectedOffset, LM_NTLM_HASH_LENGTH)));
-                            //Console.WriteLine($"[+] DPAPI hash cleartext: " + PrintHashBytes(GetBytes(msvDecryptedCredentialsBytes, template.DPAPIProtectedOffset, LM_NTLM_HASH_LENGTH)));
 
+                            /*
+                            if (Globals.debug) 
+                            { 
+                                Console.WriteLine($"[*] DPAPI hash offest: " + template.DPAPIProtectedOffset);
+                                Console.WriteLine($"[*] DPAPI hash length is " + LM_NTLM_HASH_LENGTH + " bytes");
+                                Console.WriteLine($"[*] DPAPI hash bytes: " + Helpers.ByteArrayToString(GetBytes(msvDecryptedCredentialsBytes, template.DPAPIProtectedOffset, LM_NTLM_HASH_LENGTH)));
+                                Console.WriteLine($"[+] DPAPI hash cleartext: " + PrintHashBytes(GetBytes(msvDecryptedCredentialsBytes, template.DPAPIProtectedOffset, LM_NTLM_HASH_LENGTH)));
+                             }
+                             */
                             Console.WriteLine($"`````````````````````````````````````````````````````````````````````````");
                         }
 
@@ -482,7 +492,7 @@ namespace Deadmatter.Decryptor
                             Console.WriteLine("\t [struct. " + msvCount + "] Primary");
                             Console.WriteLine($"\t * Username\t: " + Encoding.Unicode.GetString(GetBytes(msvDecryptedCredentialsBytes, usUserName.Buffer, usUserName.Length)));
                             Console.WriteLine($"\t * Domain\t: " + Encoding.Unicode.GetString(GetBytes(msvDecryptedCredentialsBytes, usLogonDomainName.Buffer, usLogonDomainName.Length)));
-                            //Console.WriteLine($"\t * DPAPI Hash\t: " + PrintHashBytes(GetBytes(msvDecryptedCredentialsBytes, template.DPAPIProtectedOffset, LM_NTLM_HASH_LENGTH)));
+                            //if (Globals.debug) { Console.WriteLine($"\t * DPAPI Hash\t: " + PrintHashBytes(GetBytes(msvDecryptedCredentialsBytes, template.DPAPIProtectedOffset, LM_NTLM_HASH_LENGTH)));}
                             Console.WriteLine($"\t * NTLM\t\t: " + PrintHashBytes(GetBytes(msvDecryptedCredentialsBytes, template.NtOwfPasswordOffset, LM_NTLM_HASH_LENGTH)));
                             Console.WriteLine($"\t * LM\t\t: " + PrintHashBytes(GetBytes(msvDecryptedCredentialsBytes, template.LmOwfPasswordOffset, LM_NTLM_HASH_LENGTH)));
                             Console.WriteLine($"\t * SHA1\t\t: " + PrintHashBytes(GetBytes(msvDecryptedCredentialsBytes, template.ShaOwPasswordOffset, SHA_DIGEST_LENGTH)));
@@ -497,8 +507,7 @@ namespace Deadmatter.Decryptor
             {
                 Console.WriteLine("\n[-] The IV found is not valid. Perhaps you should adjust the Windows version parameter with -w to get the valid IV.");
                 Console.WriteLine("\t - A wrong Windows version may affect both the validity of the IV and the MSV credentials (e.g. MTLM Hash).");
-                Console.WriteLine("\t - An invalid IV will not necessarily affect the validity of the NTLM Hash, but will invalid the DPAPI master key.");
-                //Console.WriteLine("\t - An invalid IV will invalidate the first 8 bytes of the DPAPI Master Key and hence the whole key.");
+                Console.WriteLine("\t - An invalid IV will not necessarily affect the validity of the NTLM Hash, but will invalidate the DPAPI master key.");
             }
 
 
@@ -516,7 +525,7 @@ namespace Deadmatter.Decryptor
                 }
                 Console.WriteLine(Helpers.ByteArrayToString(deadmatter.lsakeys.iv));
                 Console.WriteLine($"  ");
-                Console.WriteLine($"[*] The list of DES Keys is: ");
+                Console.WriteLine($"[*] The list of 3DES Keys is: ");
                 foreach (byte[] deskey in DESkeysList)
                 {
                     Console.WriteLine(Helpers.ByteArrayToString(deskey));
@@ -534,6 +543,48 @@ namespace Deadmatter.Decryptor
                     Console.WriteLine(string.Format("{0:X}", lsasscred));
                 }
                 Console.WriteLine($"^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^");
+            }
+
+
+            //Populate the Global list of lsakeys with the keys found (not only the valid one because we dont know if the rest will be needed later on)
+            LsaDecryptor.LsaKeys lsakeys = new LsaDecryptor.LsaKeys();
+            if (AESkeysList.Count >= DESkeysList.Count)
+            {
+                int i = 0;
+                foreach (byte[] aeskey in AESkeysList)
+                {
+                    lsakeys.iv = deadmatter.lsakeys.iv;
+                    lsakeys.aes_key = aeskey;
+                    if (DESkeysList.Count > 0 && i <= DESkeysList.Count - 1)
+                    {
+                        lsakeys.des_key = DESkeysList[i];
+                    }
+                    else
+                    {
+                        lsakeys.des_key = new byte[] { };
+                    }
+                    Globals.gLSAkeyslist.Add(lsakeys);
+                    i++;
+                }
+            }
+            else if (DESkeysList.Count > AESkeysList.Count)
+            {
+                int i = 0;
+                foreach (byte[] deskey in DESkeysList)
+                {
+                    lsakeys.iv = deadmatter.lsakeys.iv;
+                    lsakeys.des_key = deskey;
+                    if (AESkeysList.Count - 1 >= 0 && i <= AESkeysList.Count - 1)
+                    {
+                        lsakeys.aes_key = AESkeysList[i];
+                    }
+                    else
+                    {
+                        lsakeys.aes_key = new byte[] { };
+                    }
+                    Globals.gLSAkeyslist.Add(lsakeys);
+                    i++;
+                }
             }
             return 0;
         }
@@ -581,7 +632,7 @@ namespace Deadmatter.Decryptor
 
         public static byte[] BruteforceSearchValidIV(byte[] ivSegmentArray, byte[] msvCredentialsBytes, LsaDecryptor.LsaKeys lsaKeys)
         {
-            //Console.WriteLine("IV Segment: " + Helpers.ByteArrayToString(ivSegmentArray));
+            //if (Globals.debug) { Console.WriteLine("IV Segment: " + Helpers.ByteArrayToString(ivSegmentArray));}
             byte[] iv = new byte[16];
             int count;
 
@@ -607,7 +658,7 @@ namespace Deadmatter.Decryptor
                     if (isValidIV(msvDecryptedBytes))
                     {
                         Console.WriteLine("[*] Found valid IV using brute-force search");
-                        //Console.WriteLine("[+] Valid IV: " + Helpers.ByteArrayToString(iv));
+                        //if (Globals.debug) { Console.WriteLine("[+] Valid IV: " + Helpers.ByteArrayToString(iv));}
                         return iv;
                     }
                 }
@@ -617,7 +668,7 @@ namespace Deadmatter.Decryptor
 
         public static byte[] BruteforceSearchValidIVwithNulls(byte[] ivSegmentArray, byte[] msvCredentialsBytes, LsaDecryptor.LsaKeys lsaKeys)
         {
-            //Console.WriteLine("IV Segment: " + Helpers.ByteArrayToString(ivSegmentArray));
+            //if (Globals.debug) { Console.WriteLine("IV Segment: " + Helpers.ByteArrayToString(ivSegmentArray));}
             byte[] iv = new byte[16];
             for (int i = 0; i <= ivSegmentArray.Length - 16; i++)
             {
@@ -629,7 +680,7 @@ namespace Deadmatter.Decryptor
 
                 if (isValidIV(msvDecryptedBytes))
                 {
-                    //Console.WriteLine("[+] Valid IV: " + Helpers.ByteArrayToString(iv));
+                    //if (Globals.debug) { Console.WriteLine("[+] Valid IV: " + Helpers.ByteArrayToString(iv));}
                     return iv;
                 }
                 
@@ -692,15 +743,13 @@ namespace Deadmatter.Decryptor
                 {
                     Console.WriteLine($"\t * Domain\t: " + "<UNKNOWN>");
                 }
-                //Console.WriteLine($"\t * DPAPI Hash\t: " + PrintHashBytes(GetBytes(msvDecryptedCredentialsBytes, template.DPAPIProtectedOffset, LM_NTLM_HASH_LENGTH)));
+                //if (Globals.debug) { Console.WriteLine($"\t * DPAPI Hash\t: " + PrintHashBytes(GetBytes(msvDecryptedCredentialsBytes, template.DPAPIProtectedOffset, LM_NTLM_HASH_LENGTH)));}
                 Console.WriteLine($"\t * NTLM\t\t: " + PrintHashBytes(hashNTLM));
                 Console.WriteLine($"\t * LM\t\t: " + PrintHashBytes(hashLM));
                 Console.WriteLine($"\t * SHA1\t\t: " + PrintHashBytes(hashSHA1));
                 Console.WriteLine($"=========================================================================");
 
             }
-
-            //Helpers.AllPatternAt(msvDecryptedCredentialsBytes, bytesLMHash);
         }
 
 
