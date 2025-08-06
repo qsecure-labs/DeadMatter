@@ -66,7 +66,7 @@ C:\> Deadmatter.exe -f memory_dump.raw -b -d
 
 Special thanks to [cube0x0](https://twitter.com/cube0x0) as DeadMatter is heavily based on the code of [MiniDump](https://github.com/cube0x0/MiniDump)
 
-Special thanks to [theodoros997] (https://github.com/theodoros997/theodoros997) for setting up the test infrastructure and for his Google Chrome decryptor tool 
+Special thanks to [theodoros997](https://github.com/theodoros997/theodoros997) for setting up the test infrastructure and for his Google Chrome decryptor tool 
 
 Shout-outs to the following people for their projects and great work, without which our own project wouldn't have been possible. 
 
