@@ -45,12 +45,12 @@ namespace Deadmatter
             Console.WriteLine("Command usage examples:");
             Console.WriteLine("=======================");
             Console.WriteLine();
-            Console.WriteLine("Extract credentials from a full memory dump file in raw format using both mimkatz structure and carving techinques");
+            Console.WriteLine("Extract credentials from a full memory dump file in raw format using both mimkatz structure and carving techniques");
             Console.WriteLine("------------------------------------------------------------------------------------------------------------------");
             Console.WriteLine(@"C:\> Deadmatter.exe -f memory_dump.raw ");
             Console.WriteLine();
             Console.WriteLine();
-            Console.WriteLine("Extract credentials from a full memory dump file in raw format using carving techinques only");
+            Console.WriteLine("Extract credentials from a full memory dump file in raw format using carving techniques only");
             Console.WriteLine("--------------------------------------------------------------------------------------------");
             Console.WriteLine(@"C:\> Deadmatter.exe -f memory_dump.raw -m carve");
             Console.WriteLine();
@@ -70,6 +70,14 @@ namespace Deadmatter
             Console.WriteLine(@"C:\> Deadmatter.exe -f memory_dump.raw -b -d");
             Console.WriteLine();
             Console.WriteLine();
+            /* 
+            Authors:
+            Demetris Papapetrou @Voltem0rt
+            Vasilis Sikkis @s1kk1s
+            
+            Designed by QSecure
+            Supported by CYberMouflons
+            */
         }
     }
 }
